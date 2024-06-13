@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Home</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+        body {
+            background: #f7f7f7;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        .card {
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .navbar {
+            margin-bottom: 20px;
+        }
+        .profile-img {
+            height: 100px;
+            width: 100px;
+            border-radius: 50%;
+        }
+        .nav-item {
+            position: relative;
+        }
+        .nav-link {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        .nav-item:hover .nav-link {
+            display: block;
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+    </style>
+    <!-- Thêm các thư viện SockJS và STOMP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">MyApp</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <img class="profile-img" id="avatar" alt="">
+                    <p><span id="fullName"></span></p>
+                    <a class="nav-link" href="#" onclick="logout()">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="card">
+            <h2>User Profile</h2>
+            <p><strong>ID:</strong> <span id="userId"></span></p>
+            <p><strong>Social Code:</strong> <span id="socialcode"></span></p>
+            <p><strong>Username:</strong> <span id="username"></span></p>
+            <p><strong>Email:</strong> <span id="email"></span></p>
+            <p><strong>Phone:</strong> <span id="phone"></span></p>
+            <p><strong>Address:</strong> <span id="address"></span></p>
+            <p><strong>Description:</strong> <span id="description"></span></p>
+        </div>
+        
+        <!-- Thêm phần thông báo -->
+        <div id="main-content" class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <form class="form-inline">
+                        <div class="form-group">
+                            <label for="connect">WebSocket connection:</label>
+                            <button id="connect" class="btn btn-default" type="submit">Connect</button>
+                            <button id="disconnect" class="btn btn-default" type="submit" disabled="disabled">Disconnect
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <form class="form-inline">
+                        <div class="form-group">
+                            <label for="name">What is your name?</label>
+                            <input type="text" id="name" class="form-control" placeholder="Your name here...">
+                        </div>
+                        <button id="send" class="btn btn-default" type="submit">Send</button>
+                    </form>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <table id="conversation" class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>Greetings</th>
+                        </tr>
+                        </thead>
+                        <tbody id="greetings">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Thêm phần tử thông báo -->
+    <div class="notification" id="notification">
+        <p id="notification-content"></p>
+    </div>
+</body>
+<script>
+    // DuongDx: 11/06/2024
+    // Kiểm tra xem đã đăng nhập chưa
+    const token = localStorage.getItem('token');
+    // Nếu đăng nhập rồi thì lấy thông tin trả về
+    if(token){
+        console.log("home: " +token)
+        var url = "http://localhost:8080/api/me"
+        fetchDetailWithToken(url, token)
+    }
+
+    //Gửi yêu cầu GET đến API với token trong header
+    function fetchDetailWithToken(url, token) {
+        return fetch(url, {
+            headers: {
+                'Authorization': 'Token ' + token
+            }
+        }).then(response => {
+            if (!response.ok) {
+                console.log("ok")
+
+                localStorage.removeItem('token');
+            }
+            return response.text().then(text => {
+            if (text) {
+                return JSON.parse(text);
+            } else {
+                return {}; // Return an empty object if there's no response text
+            }
+        });
+        }).then(data => {
+            console.log(data)
+            // Hiển thị thông tin người dùng
+            document.getElementById('fullName').textContent = data.fullName || 'N/A';   
+            document.getElementById('avatar').src = data.avatar || 'N/A';
+
+            document.getElementById('userId').textContent = data.userId || 'N/A';
+            document.getElementById('socialcode').textContent = data.socialcode || 'N/A';
+            document.getElementById('username').textContent = data.username || 'N/A';
+            document.getElementById('email').textContent = data.email || 'N/A';
+            document.getElementById('phone').textContent = data.phone || 'N/A';
+            document.getElementById('address').textContent = data.address || 'N/A';
+            document.getElementById('description').textContent = data.description || 'N/A';
+           
+        })
+        .catch(error => {
+            localStorage.removeItem('token');
+            window.location.href = "login"
+        });
+    }    
+    
+    function logout() {
+        localStorage.removeItem('token');
+        window.location.href = "/login";
+    }
+
+    // Kết nối WebSocket
+
+    const stompClient = new StompJs.Client({
+        brokerURL: 'ws://localhost:8080/gs-guide-websocket'
+    });
+
+    stompClient.onConnect = (frame) => {
+        setConnected(true);
+        console.log('Connected: ' + frame);
+        stompClient.subscribe('/topic/greetings', (greeting) => {
+            showGreeting(JSON.parse(greeting.body).content);
+        });
+    };
+
+    stompClient.onWebSocketError = (error) => {
+        console.error('Error with websocket', error);
+    };
+
+    stompClient.onStompError = (frame) => {
+        console.error('Broker reported error: ' + frame.headers['message']);
+        console.error('Additional details: ' + frame.body);
+    };
+
+    function setConnected(connected) {
+        $("#connect").prop("disabled", connected);
+        $("#disconnect").prop("disabled", !connected);
+        if (connected) {
+            $("#conversation").show();
+        }
+        else {
+            $("#conversation").hide();
+        }
+        $("#greetings").html("");
+    }
+
+    function connect() {
+        stompClient.activate();
+    }
+
+    function disconnect() {
+        stompClient.deactivate();
+        setConnected(false);
+        console.log("Disconnected");
+    }
+
+    function sendName() {
+        stompClient.publish({
+            destination: "/app/hello",
+            body: JSON.stringify({'name': $("#name").val()})
+        });
+    }
+
+    function showGreeting(message) {
+        $("#greetings").append("<tr><td>" + message + "</td></tr>");
+    }
+
+    $(function () {
+        $("form").on('submit', (e) => e.preventDefault());
+        $( "#connect" ).click(() => connect());
+        $( "#disconnect" ).click(() => disconnect());
+        $( "#send" ).click(() => sendName());
+    });
+    
+</script>
+</html>
