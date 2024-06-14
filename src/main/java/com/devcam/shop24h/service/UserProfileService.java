@@ -62,7 +62,18 @@ public class UserProfileService {
                 // String firtName = (String) attributes.getOrDefault("family_name", null);
                 // String lastName = (String) attributes.getOrDefault("given_name", null); 
                 userProfile.setEmail((String) attributes.getOrDefault("email", null));
-                userProfile.setAvatar((String) attributes.getOrDefault("picture", null));
+                Object avatar = attributes.get("picture");
+                if (avatar instanceof String) {
+                    userProfile.setAvatar((String) avatar);
+                } else if(avatar instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> avatarMap = (Map<String, Object>) avatar;
+                    if (avatarMap.containsKey("data")) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> dataMap = (Map<String, Object>) avatarMap.get("data");
+                        userProfile.setAvatar((String) dataMap.get("url"));
+                    }
+                }
                 userProfile.setFullName((String) attributes.getOrDefault("name", null));
                 String socialcode = (String) attributes.getOrDefault("sub", attributes.get("id"));
                 userProfile.setSocialcode(socialcode);

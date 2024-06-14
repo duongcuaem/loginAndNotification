@@ -7,11 +7,14 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 
@@ -37,6 +40,7 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
             .authorizeRequests(authorizeRequests -> // Đoạn này sẽ xác định những trang nào cần check quyền những trang nào không
                 authorizeRequests
+                    .mvcMatchers("/","/ws/**").permitAll()
                     .antMatchers("/ws/**", "/app/**", "/login/**").permitAll() // Cho phép truy cập vô danh vào các endpoint WebSocket và các endpoint khác của bạn
                     .antMatchers("/private/**").authenticated()	
                     .anyRequest().permitAll()
@@ -49,12 +53,18 @@ public class SecurityConfig {
                     .successHandler(authenticationSuccessHandler()) // đăng nhập thành công google
                     .failureHandler(authenticationFailureHandler())
             )
+            
             .formLogin(formLogin ->
                 formLogin
                     .loginPage("/login")
                     .defaultSuccessUrl("/home")
                     .permitAll()
             )
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessHandler(logoutSuccessHandler())
+                .addLogoutHandler(logoutHandler())
+        )
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -72,15 +82,11 @@ public class SecurityConfig {
             public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
                 OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) authentication;
                 OAuth2User oauth2User = oauth2Token.getPrincipal();
-                String jwt;
                 Map<String, Object> attributes = oauth2User.getAttributes();
 
                 // Tạo UserPrincipal và JWT từ attributes
                 UserPrincipal userPrincipal = new UserPrincipal((String) attributes.get("email"), attributes);
-                jwt = jwtUtil.generateToken(userPrincipal);
-
-                // Lưu UserPrincipal vào session
-                request.getSession().setAttribute("user", userPrincipal);
+                String jwt = jwtUtil.generateToken(userPrincipal);
 
                 // Redirect về trang chủ với JWT trong URL
                 response.sendRedirect("/loginSuccess?token=" + jwt);
@@ -96,6 +102,33 @@ public class SecurityConfig {
                 System.err.println("Authentication failed: " + exception.getMessage());
                 request.setAttribute("error", exception.getMessage());
                 request.getRequestDispatcher("/error").forward(request, response);
+            }
+        };
+    }
+
+    @Bean
+    public LogoutSuccessHandler logoutSuccessHandler() {
+        return new LogoutSuccessHandler() {
+            @Override
+            public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+                // Xử lý khi logout thành công
+                response.sendRedirect("/login?logout");
+            }
+        };
+    }
+
+    @Bean
+    public LogoutHandler logoutHandler() {
+        return new LogoutHandler() {
+            @Override
+            public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+                // Xóa JWT hoặc các thông tin xác thực khác nếu cần
+                String token = request.getHeader("Authorization");
+                if (token != null && token.startsWith("Bearer ")) {
+                    token = token.substring(7);
+                    // Xóa token hoặc làm gì đó với token
+                }
+                SecurityContextHolder.clearContext();
             }
         };
     }

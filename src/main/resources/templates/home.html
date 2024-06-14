@@ -2,42 +2,75 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Home</title>
+    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <style>
+        /* General body styling */
         body {
             background: #f7f7f7;
             font-family: Arial, sans-serif;
         }
+
+        /* Container styling */
         .container {
             margin-top: 50px;
         }
+
+        /* Card styling */
         .card {
             padding: 20px;
             margin-bottom: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
+
+        /* Navbar styling */
         .navbar {
             margin-bottom: 20px;
+            background-color: #fff;
+            border-radius: 0;
+            border-bottom: 1px solid #ddd;
         }
+
+        /* Profile image styling */
         .profile-img {
             height: 100px;
             width: 100px;
             border-radius: 50%;
+            object-fit: cover;
         }
+
+        /* Navbar item styling */
         .nav-item {
             position: relative;
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
         }
+
+        .nav-item p {
+            margin: 0;
+            margin-left: 10px;
+        }
+
+        /* Dropdown link styling */
         .nav-link {
             display: none;
             position: absolute;
-            top: 50px;
+            top: 60px;
             right: 0;
             background: #fff;
             border: 1px solid #ddd;
             padding: 10px;
+            border-radius: 4px;
         }
+
         .nav-item:hover .nav-link {
             display: block;
         }
+
+        /* Notification styling */
         .notification {
             position: fixed;
             bottom: 20px;
@@ -50,28 +83,33 @@
             display: none;
         }
     </style>
-    <!-- Thêm các thư viện SockJS và STOMP -->
+    <!-- SockJS and STOMP libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
 </head>
 <body>
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="#">MyApp</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ml-auto">
-                <li class="nav-item">
-                    <img class="profile-img" id="avatar" alt="">
-                    <p><span id="fullName"></span></p>
-                    <a class="nav-link" href="#" onclick="logout()">Logout</a>
-                </li>
-            </ul>
+        <div class="container">
+            <a class="navbar-brand" href="#">MyApp</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <img class="profile-img" id="avatar" alt="">
+                        <p><span id="fullName"></span></p>
+                        <a class="nav-link" href="#" onclick="logout()">Logout</a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
+
+    <!-- User Profile Section -->
     <div class="container">
         <div class="card">
             <h2>User Profile</h2>
@@ -83,168 +121,226 @@
             <p><strong>Address:</strong> <span id="address"></span></p>
             <p><strong>Description:</strong> <span id="description"></span></p>
         </div>
-        
-        <!-- Thêm phần thông báo -->
-        <div id="main-content" class="container">
+
+        <!-- WebSocket Connection Section -->
+        <div id="main-content" class="card">
             <div class="row">
                 <div class="col-md-6">
                     <form class="form-inline">
                         <div class="form-group">
-                            <label for="connect">WebSocket connection:</label>
-                            <button id="connect" class="btn btn-default" type="submit">Connect</button>
-                            <button id="disconnect" class="btn btn-default" type="submit" disabled="disabled">Disconnect
-                            </button>
+                            <label for="messageToAll">Message to All:</label>
+                            <input type="text" id="messageToAll" class="form-control" placeholder="Your message here...">
                         </div>
+                        <button id="sendToAll" class="btn btn-default" type="button">Send to All</button>
                     </form>
                 </div>
                 <div class="col-md-6">
                     <form class="form-inline">
                         <div class="form-group">
-                            <label for="name">What is your name?</label>
-                            <input type="text" id="name" class="form-control" placeholder="Your name here...">
+                            <label for="messageToUser">Message to User:</label>
+                            <input type="text" id="messageToUser" class="form-control" placeholder="Your message here...">
                         </div>
-                        <button id="send" class="btn btn-default" type="submit">Send</button>
+                        <label for="users">Select User:</label>
+                        <select id="users" class="form-control">
+                            <!-- Điền vào danh sách người dùng -->
+                            <option value="linhthuy">thùy linh</option>
+                            <option value="DuongDx">DuongDx</option>
+                            <option value="108077826711910032318">dương đào</option>
+                            <option value="6389162541208170">dương đào f</option>
+                        </select>
+                        <button id="sendToUser" class="btn btn-default" type="button">Send to User</button>
                     </form>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <table id="conversation" class="table table-striped">
-                        <thead>
-                        <tr>
-                            <th>Greetings</th>
-                        </tr>
-                        </thead>
-                        <tbody id="greetings">
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Thêm phần tử thông báo -->
+
+    <!-- Notification Element -->
     <div class="notification" id="notification">
         <p id="notification-content"></p>
     </div>
-</body>
-<script>
-    // DuongDx: 11/06/2024
-    // Kiểm tra xem đã đăng nhập chưa
-    const token = localStorage.getItem('token');
-    // Nếu đăng nhập rồi thì lấy thông tin trả về
-    if(token){
-        console.log("home: " +token)
-        var url = "http://localhost:8080/api/me"
-        fetchDetailWithToken(url, token)
-    }
 
-    //Gửi yêu cầu GET đến API với token trong header
-    function fetchDetailWithToken(url, token) {
-        return fetch(url, {
-            headers: {
-                'Authorization': 'Token ' + token
-            }
-        }).then(response => {
-            if (!response.ok) {
-                console.log("ok")
+    <script>
+        let stompClient;
 
+        // User Authentication
+        const token = localStorage.getItem('token');
+        if(token){
+            var url = "http://localhost:8080/api/me";
+            fetchDetailWithToken(url, token);
+        }
+
+        // Fetch user details with token
+        async function fetchDetailWithToken(url, token) {
+            try {
+                let response = await fetch(url, {
+                    headers: {
+                        'Authorization': 'Token ' + token
+                    }
+                });
+                if (!response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = "/login";
+                    return;
+                }
+                let data = await response.json();
+                // Populate user details in profile section
+                document.getElementById('fullName').textContent = data.fullName || 'N/A';   
+                document.getElementById('avatar').src = data.avatar || 'N/A';
+                document.getElementById('userId').textContent = data.userId || 'N/A';
+                document.getElementById('socialcode').textContent = data.socialcode || 'N/A';
+                document.getElementById('username').textContent = data.username || 'N/A';
+                document.getElementById('email').textContent = data.email || 'N/A';
+                document.getElementById('phone').textContent = data.phone || 'N/A';
+                document.getElementById('address').textContent = data.address || 'N/A';
+                document.getElementById('description').textContent = data.description || 'N/A';
+                var userItem = 0;
+                // Lưu Id vào storage
+                if(data.userId != null){
+                    localStorage.setItem('userId', data.userId);
+                    userItem = data.userId;
+                }else{
+                    if(data.socialcode != null){
+                        localStorage.setItem('userId', data.socialcode);
+                        userItem = data.socialcode;
+                    }
+                }
+                console.log(userItem);
+                connect(userItem);
+            } catch (error) {
+                console.error('Error fetching user details:', error);
                 localStorage.removeItem('token');
+                window.location.href = "/login";
             }
-            return response.text().then(text => {
-            if (text) {
-                return JSON.parse(text);
+        }
+
+        // Logout function
+        function logout() {
+            callLogout();
+        }
+
+        function callLogout() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                fetch('http://localhost:8080/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        localStorage.removeItem('token');
+                        window.location.href = "/login";
+                    } else {
+                        console.error('Logout failed');
+                    }
+                });
             } else {
-                return {}; // Return an empty object if there's no response text
+                localStorage.removeItem('token');
+                window.location.href = "/login";
             }
-        });
-        }).then(data => {
-            console.log(data)
-            // Hiển thị thông tin người dùng
-            document.getElementById('fullName').textContent = data.fullName || 'N/A';   
-            document.getElementById('avatar').src = data.avatar || 'N/A';
-
-            document.getElementById('userId').textContent = data.userId || 'N/A';
-            document.getElementById('socialcode').textContent = data.socialcode || 'N/A';
-            document.getElementById('username').textContent = data.username || 'N/A';
-            document.getElementById('email').textContent = data.email || 'N/A';
-            document.getElementById('phone').textContent = data.phone || 'N/A';
-            document.getElementById('address').textContent = data.address || 'N/A';
-            document.getElementById('description').textContent = data.description || 'N/A';
-           
-        })
-        .catch(error => {
-            localStorage.removeItem('token');
-            window.location.href = "login"
-        });
-    }    
-    
-    function logout() {
-        localStorage.removeItem('token');
-        window.location.href = "/login";
-    }
-
-    // Kết nối WebSocket
-
-    const stompClient = new StompJs.Client({
-        brokerURL: 'ws://localhost:8080/gs-guide-websocket'
-    });
-
-    stompClient.onConnect = (frame) => {
-        setConnected(true);
-        console.log('Connected: ' + frame);
-        stompClient.subscribe('/topic/greetings', (greeting) => {
-            showGreeting(JSON.parse(greeting.body).content);
-        });
-    };
-
-    stompClient.onWebSocketError = (error) => {
-        console.error('Error with websocket', error);
-    };
-
-    stompClient.onStompError = (frame) => {
-        console.error('Broker reported error: ' + frame.headers['message']);
-        console.error('Additional details: ' + frame.body);
-    };
-
-    function setConnected(connected) {
-        $("#connect").prop("disabled", connected);
-        $("#disconnect").prop("disabled", !connected);
-        if (connected) {
-            $("#conversation").show();
         }
-        else {
-            $("#conversation").hide();
+
+
+        // WebSocket Client Setup
+        function connect(userId) {
+            stompClient = new StompJs.Client({
+                brokerURL: 'ws://localhost:8080/ws'
+            });
+
+            stompClient.onConnect = (frame) => {
+                console.log('Connected: ' + frame);
+                console.log('UserId: ' + userId);
+                console.log('/user/' + userId + '/specific/notifications');
+                // Đăng ký để nhận thông báo từ kênh queue cho người dùng cụ thể (thông báo cá nhân)
+                stompClient.subscribe('/user/specific/notifications', function (notification) {
+                    showNotification(JSON.parse(notification.body));
+                });
+                // Đăng ký để nhận thông báo từ kênh topic (thông báo chung)
+                stompClient.subscribe('/all/notifications', function (notification) {
+                    showNotification(JSON.parse(notification.body));
+                });
+            };
+
+            stompClient.onWebSocketError = (error) => {
+                console.error('Error with websocket', error);
+            };
+
+            stompClient.onStompError = (frame) => {
+                console.error('Broker reported error: ' + frame.headers['message']);
+                console.error('Additional details: ' + frame.body);
+            };
+
+            stompClient.activate();
         }
-        $("#greetings").html("");
-    }
 
-    function connect() {
-        stompClient.activate();
-    }
+        // Display notification
+        function showNotification(notification) {
+            const notificationElement = document.getElementById('notification');
+            document.getElementById('notification-content').textContent = notification.message;
+            notificationElement.style.display = 'block';
+            setTimeout(() => {
+                notificationElement.style.display = 'none';
+            }, 10000);
+        }
 
-    function disconnect() {
-        stompClient.deactivate();
-        setConnected(false);
-        console.log("Disconnected");
-    }
+        // Send notification to all
+        function sendNotificationToAll() {
+            const messageContent = $('#messageToAll').val();
+            const notification = {
+                message: messageContent,
+                category: "general",
+                type: "general",
+                status: "unread"
+            };
+            fetch('http://localhost:8080/notifyAll', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(notification)
+            }).then(response => {
+                if (response.ok) {
+                    console.log("Notification sent to all");
+                } else {
+                    console.error("Failed to send notification");
+                }
+            });
+        }
 
-    function sendName() {
-        stompClient.publish({
-            destination: "/app/hello",
-            body: JSON.stringify({'name': $("#name").val()})
+        // Send notification to specific user
+        function sendNotificationToUser() {
+            const selectedUser = $("#users").val();
+            const messageContent = $('#messageToUser').val();
+            const notification = {
+                message: messageContent,
+                recipient: selectedUser,
+                category: "personal",
+                type: "personal",
+                status: "unread"
+            };
+            fetch('http://localhost:8080/sendPersonalNotification?userId=' + 0, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(notification)
+            }).then(response => {
+                console.log(response);
+                if (response.ok) {
+                    console.log("Notification sent to user " + selectedUser);
+                } else {
+                    console.error("Failed to send notification");
+                }
+            });
+        }
+
+        // jQuery event handlers
+        $(function () {
+            $("#sendToAll").click(() => sendNotificationToAll());
+            $("#sendToUser").click(() => sendNotificationToUser());
         });
-    }
-
-    function showGreeting(message) {
-        $("#greetings").append("<tr><td>" + message + "</td></tr>");
-    }
-
-    $(function () {
-        $("form").on('submit', (e) => e.preventDefault());
-        $( "#connect" ).click(() => connect());
-        $( "#disconnect" ).click(() => disconnect());
-        $( "#send" ).click(() => sendName());
-    });
-    
-</script>
+    </script>
+</body>
 </html>
